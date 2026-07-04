@@ -1,0 +1,166 @@
+<Window x:Class="PebbleInjector.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        ResizeMode="CanMinimize" WindowStartupLocation="CenterScreen"
+        Title="PebbleInjector" Height="300" Width="500"
+        WindowStyle="None" AllowsTransparency="True" Background="#121212">
+
+    <Window.Clip>
+        <RectangleGeometry Rect="0,0,500,300" RadiusX="15" RadiusY="15"/>
+    </Window.Clip>
+
+    <Window.Triggers>
+        <EventTrigger RoutedEvent="Window.Loaded">
+            <BeginStoryboard>
+                <Storyboard>
+                    <DoubleAnimation 
+                        From="450" To="400"  Duration="00:00:0.5"
+                        Storyboard.TargetProperty="(Window.Top)">
+                        <DoubleAnimation.EasingFunction>
+                            <QuadraticEase EasingMode="EaseOut"/>
+                        </DoubleAnimation.EasingFunction>
+                    </DoubleAnimation>
+                </Storyboard>
+            </BeginStoryboard>
+        </EventTrigger>
+    </Window.Triggers>
+
+    <Grid>
+        <Grid MouseLeftButtonDown="DragWindow" Background="Transparent"/>
+
+        <!-- Console button (top right) -->
+        <Image Visibility="Hidden" Source="console.png" Width="20" Height="20" 
+               HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0, 12, 35, 0" 
+               MouseLeftButtonUp="ConsoleButton_Click">
+            <Image.Style>
+                <Style TargetType="Image">
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Duration="0:0:0.1" To="0.8" 
+                                                         Storyboard.TargetProperty="(Image.Opacity)"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Duration="0:0:0.1" To="1" 
+                                                         Storyboard.TargetProperty="(Image.Opacity)"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </Image.Style>
+        </Image>
+
+        <!-- Close button (top left) -->
+        <Label Content="✕" FontWeight="ExtraBold" FontSize="20" Foreground="White"
+               Height="30" Width="30" Padding="0" Margin="5"
+               HorizontalAlignment="Right" VerticalAlignment="Top" 
+               HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+               MouseLeftButtonUp="CloseWindow">
+            <Label.Style>
+                <Style TargetType="Label">
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Duration="0:0:0.1" To="Coral" 
+                                                        Storyboard.TargetProperty="(Label.Foreground).(SolidColorBrush.Color)"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <ColorAnimation Duration="0:0:0.1" To="White" 
+                                                        Storyboard.TargetProperty="(Label.Foreground).(SolidColorBrush.Color)"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </Label.Style>
+        </Label>
+
+        <!-- Banner image (replace with your own if needed) -->
+        <Image Source="horion-banner.png" Width="300" Margin="0, 0, 0, 80"/>
+
+        <!-- Main inject button -->
+        <Label x:Name="InjectButton" Content="inject" FontFamily="Bahnschrift" FontWeight="Bold" 
+               FontSize="16" Background="#FF489B5E" Foreground="White" BorderThickness="0"
+               Height="60" Width="250" RenderTransformOrigin="0.5 0.5"
+               HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,140,0,0"
+               HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
+               MouseLeftButtonUp="InjectButton_Left" MouseRightButtonUp="InjectButton_Right">
+            <Label.Clip>
+                <RectangleGeometry Rect="0,0,250,60" RadiusX="10" RadiusY="10"/>
+            </Label.Clip>
+            <Label.RenderTransform>
+                <ScaleTransform x:Name="ScaleTransform" ScaleX="1" ScaleY="1"/>
+            </Label.RenderTransform>
+            <Label.Style>
+                <Style TargetType="Label">
+                    <Style.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Trigger.EnterActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="(Label.RenderTransform).(ScaleTransform.ScaleX)" 
+                                                         To="1.05" Duration="0:0:0:0.2">
+                                            <DoubleAnimation.EasingFunction>
+                                                <QuadraticEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetProperty="(Label.RenderTransform).(ScaleTransform.ScaleY)" 
+                                                         To="1.05" Duration="0:0:0:0.2">
+                                            <DoubleAnimation.EasingFunction>
+                                                <QuadraticEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.EnterActions>
+                            <Trigger.ExitActions>
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="(Label.RenderTransform).(ScaleTransform.ScaleX)" 
+                                                         To="1" Duration="0:0:0:0.2">
+                                            <DoubleAnimation.EasingFunction>
+                                                <QuadraticEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                        <DoubleAnimation Storyboard.TargetProperty="(Label.RenderTransform).(ScaleTransform.ScaleY)" 
+                                                         To="1" Duration="0:0:0:0.2">
+                                            <DoubleAnimation.EasingFunction>
+                                                <QuadraticEase EasingMode="EaseOut"/>
+                                            </DoubleAnimation.EasingFunction>
+                                        </DoubleAnimation>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </Trigger.ExitActions>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </Label.Style>
+        </Label>
+
+        <!-- Connection state label (bottom right) -->
+        <Label Visibility="Hidden" FontFamily="Bahnschrift" 
+               x:Name="ConnectionStateLabel" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="5"/>
+        
+        <!-- Version label (bottom left) -->
+        <Label FontFamily="Bahnschrift" Foreground="White" 
+               x:Name="VersionLabel" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="5"/>
+    </Grid>
+</Window>

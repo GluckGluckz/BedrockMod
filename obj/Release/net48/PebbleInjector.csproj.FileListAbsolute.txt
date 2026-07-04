@@ -1,0 +1,13 @@
+C:\dev\PebbleInjector\Injector-master\PebbleInjector\obj\Release\net48\PebbleInjector.csproj.AssemblyReference.cache
+C:\dev\PebbleInjector\Injector-master\PebbleInjector\obj\Release\net48\MainWindow.baml
+C:\dev\PebbleInjector\Injector-master\PebbleInjector\obj\Release\net48\App.baml
+C:\dev\PebbleInjector\Injector-master\PebbleInjector\obj\Release\net48\MainWindow.g.cs
+C:\dev\PebbleInjector\Injector-master\PebbleInjector\obj\Release\net48\App.g.cs
+C:\dev\PebbleInjector\Injector-master\PebbleInjector\obj\Release\net48\PebbleInjector_MarkupCompile.cache
+C:\dev\PebbleInjector\Injector-master\PebbleInjector\obj\Release\net48\PebbleInjector.g.resources
+C:\dev\PebbleInjector\Injector-master\PebbleInjector\obj\Release\net48\PebbleInjector.GeneratedMSBuildEditorConfig.editorconfig
+C:\dev\PebbleInjector\Injector-master\PebbleInjector\obj\Release\net48\PebbleInjector.AssemblyInfoInputs.cache
+C:\dev\PebbleInjector\Injector-master\PebbleInjector\obj\Release\net48\PebbleInjector.AssemblyInfo.cs
+C:\dev\PebbleInjector\Injector-master\PebbleInjector\obj\Release\net48\PebbleInjector.csproj.CoreCompileInputs.cache
+C:\dev\PebbleInjector\Injector-master\PebbleInjector\obj\Release\net48\ConsoleWindow.baml
+C:\dev\PebbleInjector\Injector-master\PebbleInjector\obj\Release\net48\ConsoleWindow.g.cs

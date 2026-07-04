@@ -1,0 +1,64 @@
+{
+  "format": 1,
+  "restore": {
+    "C:\\dev\\PebbleInjector\\Injector-master\\PebbleInjector\\PebbleInjector.csproj": {}
+  },
+  "projects": {
+    "C:\\dev\\PebbleInjector\\Injector-master\\PebbleInjector\\PebbleInjector.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\dev\\PebbleInjector\\Injector-master\\PebbleInjector\\PebbleInjector.csproj",
+        "projectName": "PebbleInjector",
+        "projectPath": "C:\\dev\\PebbleInjector\\Injector-master\\PebbleInjector\\PebbleInjector.csproj",
+        "packagesPath": "C:\\Users\\Antha\\.nuget\\packages\\",
+        "outputPath": "C:\\dev\\PebbleInjector\\Injector-master\\PebbleInjector\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\Antha\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net48"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net48": {
+            "framework": "net48",
+            "targetAlias": "net48",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "10.0.300"
+      },
+      "frameworks": {
+        "net48": {
+          "framework": "net48",
+          "targetAlias": "net48",
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.301\\RuntimeIdentifierGraph.json"
+        }
+      },
+      "runtimes": {
+        "win-x86": {
+          "#import": []
+        }
+      }
+    }
+  }
+}

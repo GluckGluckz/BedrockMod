@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>PebbleInjector</AssemblyName>
+    <StartupObject>PebbleInjector.App</StartupObject>
+    <Platforms>x64</Platforms>
+    <Authors>PebbleQuest Developers</Authors>
+    <Description>Injector for PebbleCore, a Minecraft: Bedrock Edition utility mod</Description>
+    <SignAssembly>false</SignAssembly>
+    <Version>1.0.0</Version>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <Copyright>©2026</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Microsoft.VisualBasic" />
+    <Reference Include="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="console.png"/>
+    <Resource Include="horion-banner.png"/>
+  </ItemGroup>
+
+</Project>
