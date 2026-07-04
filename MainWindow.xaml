@@ -32,7 +32,7 @@
         <Grid MouseLeftButtonDown="DragWindow" Background="Transparent"/>
 
         <!-- Console button (top right) -->
-        <Image Visibility="Hidden" Source="console.png" Width="20" Height="20" 
+        <Image Source="console.png" Width="20" Height="20"
                HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0, 12, 35, 0" 
                MouseLeftButtonUp="ConsoleButton_Click">
             <Image.Style>
@@ -117,13 +117,13 @@
                                 <BeginStoryboard>
                                     <Storyboard>
                                         <DoubleAnimation Storyboard.TargetProperty="(Label.RenderTransform).(ScaleTransform.ScaleX)" 
-                                                         To="1.05" Duration="0:0:0:0.2">
+                                                         To="1.05" Duration="0:0:0.2">
                                             <DoubleAnimation.EasingFunction>
                                                 <QuadraticEase EasingMode="EaseOut"/>
                                             </DoubleAnimation.EasingFunction>
                                         </DoubleAnimation>
                                         <DoubleAnimation Storyboard.TargetProperty="(Label.RenderTransform).(ScaleTransform.ScaleY)" 
-                                                         To="1.05" Duration="0:0:0:0.2">
+                                                         To="1.05" Duration="0:0:0.2">
                                             <DoubleAnimation.EasingFunction>
                                                 <QuadraticEase EasingMode="EaseOut"/>
                                             </DoubleAnimation.EasingFunction>
@@ -135,13 +135,13 @@
                                 <BeginStoryboard>
                                     <Storyboard>
                                         <DoubleAnimation Storyboard.TargetProperty="(Label.RenderTransform).(ScaleTransform.ScaleX)" 
-                                                         To="1" Duration="0:0:0:0.2">
+                                                         To="1" Duration="0:0:0.2">
                                             <DoubleAnimation.EasingFunction>
                                                 <QuadraticEase EasingMode="EaseOut"/>
                                             </DoubleAnimation.EasingFunction>
                                         </DoubleAnimation>
                                         <DoubleAnimation Storyboard.TargetProperty="(Label.RenderTransform).(ScaleTransform.ScaleY)" 
-                                                         To="1" Duration="0:0:0:0.2">
+                                                         To="1" Duration="0:0:0.2">
                                             <DoubleAnimation.EasingFunction>
                                                 <QuadraticEase EasingMode="EaseOut"/>
                                             </DoubleAnimation.EasingFunction>

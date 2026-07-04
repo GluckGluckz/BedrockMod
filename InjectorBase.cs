@@ -1,173 +1,266 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.AccessControl;
 using System.Security.Principal;
-using System.Threading;
-using System.Windows;
+using System.Text;
 
 namespace PebbleInjector
 {
-    // P/Invoke declarations for DLL injection
     public static class InjectorBase
     {
-        [DllImport("kernel32.dll")]
-        public static extern IntPtr OpenProcess(IntPtr dwDesiredAccess, bool bInheritHandle, uint processId);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr OpenProcess(uint desiredAccess, bool inheritHandle, uint processId);
 
-        [DllImport("kernel32.dll")]
-        public static extern bool CloseHandle(IntPtr hObject);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool CloseHandle(IntPtr handle);
 
-        [DllImport("kernel32.dll")]
-        public static extern IntPtr VirtualAllocEx(IntPtr hProcess, IntPtr lpAddress, uint dwSize, uint flAllocationType, uint flProtect);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr VirtualAllocEx(
+            IntPtr process,
+            IntPtr address,
+            UIntPtr size,
+            uint allocationType,
+            uint protection);
 
-        [DllImport("kernel32.dll")]
-        public static extern bool WriteProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, char[] lpBuffer, int nSize, out IntPtr lpNumberOfBytesWritten);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool WriteProcessMemory(
+            IntPtr process,
+            IntPtr baseAddress,
+            byte[] buffer,
+            UIntPtr size,
+            out UIntPtr bytesWritten);
 
-        [DllImport("kernel32.dll")]
-        public static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
+        [DllImport("kernel32.dll", CharSet = CharSet.Ansi, SetLastError = true)]
+        private static extern IntPtr GetProcAddress(IntPtr module, string procedureName);
 
-        [DllImport("kernel32.dll")]
-        public static extern IntPtr GetModuleHandle(string lpModuleName);
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern IntPtr GetModuleHandle(string moduleName);
 
-        [DllImport("kernel32.dll")]
-        public static extern IntPtr CreateRemoteThread(IntPtr hProcess, IntPtr lpThreadAttributes, uint dwStackSize, IntPtr lpStartAddress, IntPtr lpParameter, uint dwCreationFlags, ref IntPtr lpThreadId);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr CreateRemoteThread(
+            IntPtr process,
+            IntPtr threadAttributes,
+            UIntPtr stackSize,
+            IntPtr startAddress,
+            IntPtr parameter,
+            uint creationFlags,
+            out uint threadId);
 
-        [DllImport("kernel32.dll")]
-        public static extern uint WaitForSingleObject(IntPtr handle, uint milliseconds);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern uint WaitForSingleObject(IntPtr handle, uint milliseconds);
 
-        [DllImport("kernel32.dll")]
-        public static extern bool VirtualFreeEx(IntPtr hProcess, IntPtr lpAddress, int dwSize, IntPtr dwFreeType);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool VirtualFreeEx(
+            IntPtr process,
+            IntPtr address,
+            UIntPtr size,
+            uint freeType);
 
-        // Process access flags
-        public const int PROCESS_VM_OPERATION = 0x0008;
-        public const int PROCESS_VM_WRITE = 0x0020;
-        public const int PROCESS_QUERY_INFORMATION = 0x0400;
-        public const int PROCESS_ALL_ACCESS = 0xFFFF;
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool GetExitCodeThread(IntPtr thread, out uint exitCode);
 
-        // Memory protection flags
-        public const int PAGE_READWRITE = 0x04;
-        public const int PAGE_EXECUTE_READWRITE = 0x40;
+        private const uint ProcessCreateThread = 0x0002;
+        private const uint ProcessVmOperation = 0x0008;
+        private const uint ProcessVmRead = 0x0010;
+        private const uint ProcessVmWrite = 0x0020;
+        private const uint ProcessQueryInformation = 0x0400;
+        private const uint MemCommit = 0x1000;
+        private const uint MemReserve = 0x2000;
+        private const uint MemRelease = 0x8000;
+        private const uint PageReadWrite = 0x04;
+        private const uint WaitObject0 = 0;
+        private const uint WaitTimeout = 0x102;
 
-        [DllImport("user32.dll")]
-        public static extern IntPtr FindWindow(String lpClassName, String lpWindowName);
-
-        [DllImport("user32.dll")]
-        public static extern bool SetForegroundWindow(IntPtr hWnd);
-
-        // Inject DLL into a running process
-        public static void Inject(string dllPath, uint processId)
+        public static void Inject(string dllPath, uint processId, Action<string> reportStatus = null)
         {
             if (!File.Exists(dllPath))
             {
-                MessageBox.Show($"DLL not found: {dllPath}");
-                return;
+                throw new FileNotFoundException("The selected DLL was not found.", dllPath);
             }
 
-            SetStatus("setting file perms");
+            dllPath = Path.GetFullPath(dllPath);
+            Report(reportStatus, "setting file permissions");
+            GrantAppContainerReadAccess(dllPath);
+
+            Report(reportStatus, $"finding process (PID: {processId})");
+            Process process;
+            try
+            {
+                process = Process.GetProcessById(checked((int)processId));
+                if (process.HasExited)
+                {
+                    throw new InvalidOperationException("The target process has already exited.");
+                }
+            }
+            catch (ArgumentException ex)
+            {
+                throw new InvalidOperationException($"No running process has PID {processId}.", ex);
+            }
+
+            try
+            {
+                if (IsModuleLoaded(process, dllPath))
+                {
+                    throw new InvalidOperationException("That DLL is already loaded in Minecraft.");
+                }
+
+                InjectCore(process, dllPath, reportStatus);
+            }
+            finally
+            {
+                process.Dispose();
+            }
+        }
+
+        private static void InjectCore(Process process, string dllPath, Action<string> reportStatus)
+        {
+            Report(reportStatus, $"injecting into PID: {process.Id}");
+            var access = ProcessCreateThread | ProcessVmOperation | ProcessVmRead |
+                         ProcessVmWrite | ProcessQueryInformation;
+            var processHandle = OpenProcess(access, false, checked((uint)process.Id));
+            if (processHandle == IntPtr.Zero)
+            {
+                ThrowLastWin32Error("Could not open the Minecraft process");
+            }
+
+            IntPtr remotePath = IntPtr.Zero;
+            IntPtr threadHandle = IntPtr.Zero;
+            var threadCompleted = false;
+            try
+            {
+                var pathBytes = Encoding.Unicode.GetBytes(dllPath + "\0");
+                var pathSize = new UIntPtr((uint)pathBytes.Length);
+                remotePath = VirtualAllocEx(
+                    processHandle,
+                    IntPtr.Zero,
+                    pathSize,
+                    MemCommit | MemReserve,
+                    PageReadWrite);
+                if (remotePath == IntPtr.Zero)
+                {
+                    ThrowLastWin32Error("Could not allocate memory in the Minecraft process");
+                }
+
+                UIntPtr bytesWritten;
+                if (!WriteProcessMemory(processHandle, remotePath, pathBytes, pathSize, out bytesWritten) ||
+                    bytesWritten.ToUInt64() != (ulong)pathBytes.Length)
+                {
+                    ThrowLastWin32Error("Could not write the DLL path to the Minecraft process");
+                }
+
+                var kernel32 = GetModuleHandle("kernel32.dll");
+                var loadLibrary = kernel32 == IntPtr.Zero
+                    ? IntPtr.Zero
+                    : GetProcAddress(kernel32, "LoadLibraryW");
+                if (loadLibrary == IntPtr.Zero)
+                {
+                    ThrowLastWin32Error("Could not locate LoadLibraryW");
+                }
+
+                uint threadId;
+                threadHandle = CreateRemoteThread(
+                    processHandle,
+                    IntPtr.Zero,
+                    UIntPtr.Zero,
+                    loadLibrary,
+                    remotePath,
+                    0,
+                    out threadId);
+                if (threadHandle == IntPtr.Zero)
+                {
+                    ThrowLastWin32Error("Could not start the injection thread");
+                }
+
+                var waitResult = WaitForSingleObject(threadHandle, 15000);
+                threadCompleted = waitResult == WaitObject0;
+                if (waitResult == WaitTimeout)
+                {
+                    throw new TimeoutException("Minecraft did not finish loading the DLL within 15 seconds.");
+                }
+                if (!threadCompleted)
+                {
+                    ThrowLastWin32Error("Waiting for the injection thread failed");
+                }
+
+                uint exitCode;
+                if (!GetExitCodeThread(threadHandle, out exitCode) || exitCode == 0)
+                {
+                    throw new InvalidOperationException(
+                        "Minecraft rejected the DLL. Confirm that the DLL is valid and uses the x64 architecture.");
+                }
+
+                Report(reportStatus, "done");
+            }
+            finally
+            {
+                if (threadHandle != IntPtr.Zero)
+                {
+                    CloseHandle(threadHandle);
+                }
+
+                // A timed-out thread may still be reading this buffer.
+                if (remotePath != IntPtr.Zero && threadCompleted)
+                {
+                    VirtualFreeEx(processHandle, remotePath, UIntPtr.Zero, MemRelease);
+                }
+
+                CloseHandle(processHandle);
+            }
+        }
+
+        private static void GrantAppContainerReadAccess(string dllPath)
+        {
             try
             {
                 var fileInfo = new FileInfo(dllPath);
                 var accessControl = fileInfo.GetAccessControl();
-                accessControl.AddAccessRule(new FileSystemAccessRule(new SecurityIdentifier("S-1-15-2-1"), FileSystemRights.FullControl, InheritanceFlags.None, PropagationFlags.NoPropagateInherit, AccessControlType.Allow));
+                accessControl.AddAccessRule(new FileSystemAccessRule(
+                    new SecurityIdentifier("S-1-15-2-1"),
+                    FileSystemRights.ReadAndExecute,
+                    InheritanceFlags.None,
+                    PropagationFlags.None,
+                    AccessControlType.Allow));
                 fileInfo.SetAccessControl(accessControl);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                MessageBox.Show("Could not set permissions, try running the injector as admin.");
-                return;
+                throw new InvalidOperationException(
+                    "Could not grant Minecraft permission to read the DLL. Try running the injector as administrator.",
+                    ex);
             }
-
-            SetStatus($"finding process (PID: {processId})");
-            var processes = Process.GetProcessesByName(ProcessNameFromPath(processId));
-            
-            if (processes.Length == 0)
-            {
-                MessageBox.Show($"Process not found with PID: {processId}");
-                return;
-            }
-
-            var process = processes.First(p => p.Id == processId && p.Responding);
-
-            // Check if already injected
-            for (int i = 0; i < process.Modules.Count; i++)
-            {
-                if (process.Modules[i].FileName != null && process.Modules[i].FileName.Contains(Path.GetFileName(dllPath)))
-                {
-                    MessageBox.Show("Already injected!");
-                    return;
-                }
-            }
-
-            SetStatus($"injecting into PID: {processId}");
-            
-            // Open process with injection permissions
-            IntPtr handle = OpenProcess((IntPtr)(PROCESS_VM_OPERATION | PROCESS_VM_WRITE | PROCESS_QUERY_INFORMATION), false, (uint)process.Id);
-            
-            if (handle == IntPtr.Zero || !process.Responding)
-            {
-                MessageBox.Show("Failed to get process handle");
-                return;
-            }
-
-            // Allocate memory for DLL path in target process
-            IntPtr p1 = VirtualAllocEx(handle, IntPtr.Zero, (uint)(dllPath.Length + 1), 0x1000U, 0x04U);
-            
-            if (p1 == IntPtr.Zero)
-            {
-                MessageBox.Show("Failed to allocate memory");
-                return;
-            }
-
-            // Write DLL path into allocated memory
-            WriteProcessMemory(handle, p1, dllPath.ToCharArray(), dllPath.Length, out IntPtr p2);
-
-            // Get LoadLibraryA address from kernel32.dll in target process
-            IntPtr procAddress = GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");
-
-            if (procAddress == IntPtr.Zero)
-            {
-                MessageBox.Show("Failed to get LoadLibraryA address");
-                return;
-            }
-
-            // Create remote thread to execute LoadLibraryA
-            IntPtr p3 = CreateRemoteThread(handle, IntPtr.Zero, 0U, procAddress, p1, 0U, ref p2);
-
-            if (p3 == IntPtr.Zero)
-            {
-                MessageBox.Show("Failed to create remote thread");
-                return;
-            }
-
-            // Wait for injection thread to complete
-            uint n = WaitForSingleObject(p3, 5000);
-            
-            // Cleanup allocated memory
-            VirtualFreeEx(handle, p1, 0, (IntPtr)0x4000);
-            CloseHandle(p3);
-            CloseHandle(handle);
-
-            SetStatus("done");
         }
 
-        private static string ProcessNameFromPath(uint pid)
+        private static bool IsModuleLoaded(Process process, string dllPath)
         {
             try
             {
-                var process = Process.GetProcessById((int)pid);
-                return process.ProcessName;
+                var expectedPath = Path.GetFullPath(dllPath);
+                foreach (ProcessModule module in process.Modules)
+                {
+                    if (string.Equals(module.FileName, expectedPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+                }
             }
             catch
             {
-                return "Minecraft.Windows";
+                // Packaged processes can deny module enumeration; injection may still work.
             }
+
+            return false;
         }
 
-        public static void SetStatus(string status)
+        private static void ThrowLastWin32Error(string message)
         {
-            // Override in derived class
+            throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error(), message);
+        }
+
+        private static void Report(Action<string> reportStatus, string status)
+        {
+            reportStatus?.Invoke(status);
         }
     }
 }

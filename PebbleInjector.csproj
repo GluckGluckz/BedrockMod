@@ -12,7 +12,7 @@
     <SignAssembly>false</SignAssembly>
     <Version>1.0.0</Version>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <Copyright>©2026</Copyright>
+    <Copyright>© 2026</Copyright>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,6 +23,11 @@
   <ItemGroup>
     <Resource Include="console.png"/>
     <Resource Include="horion-banner.png"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Developer-only asset generator; it is not part of the WPF application. -->
+    <Compile Remove="CreateImages.cs" />
   </ItemGroup>
 
 </Project>

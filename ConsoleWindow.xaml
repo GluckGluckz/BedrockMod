@@ -4,11 +4,21 @@
         Title="PebbleInjector Console" Height="300" Width="400"
         WindowStyle="None" AllowsTransparency="True" Background="#121212"
         ResizeMode="CanResizeWithGrip">
-    <Grid>
-        <!-- Simple console output area -->
-        <TextBlock TextWrapping="Wrap" Foreground="White" 
-                   Padding="10" FontSize="12" 
-                   Text="[Console] Ready for injection..."
-                   VerticalAlignment="Center"/>
-    </Grid>
+    <Border BorderBrush="#FF489B5E" BorderThickness="1" CornerRadius="8">
+        <Grid Margin="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <TextBlock Text="PebbleInjector Console" Foreground="White"
+                       FontWeight="Bold" Margin="0,0,0,8"
+                       MouseLeftButtonDown="DragWindow"/>
+            <TextBox x:Name="ConsoleText" Grid.Row="1"
+                     IsReadOnly="True" TextWrapping="Wrap"
+                     VerticalScrollBarVisibility="Auto"
+                     Background="#121212" Foreground="#FFE0E0E0"
+                     BorderThickness="0" FontFamily="Consolas"
+                     Text="[Console] Ready."/>
+        </Grid>
+    </Border>
 </Window>

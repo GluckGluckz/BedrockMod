@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Reflection;
@@ -6,41 +7,25 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using Microsoft.Win32;
-using System.Diagnostics;
-using System.Threading;
-using static Microsoft.VisualBasic.Interaction;
 
 namespace PebbleInjector
 {
     public partial class MainWindow : Window
     {
-        private string _status = "";
-        private bool _done = true;
-        private int _ticks = 0;
-        private ConnectionState _connectionState = ConnectionState.None;
-        private bool _consoleVisible = false;
-        private ConsoleWindow console = new ConsoleWindow();
+        private const string DefaultDllUrl = "https://horion.download/bin/Horion.dll";
 
-        // Default DLL download URL (can be overridden)
-        private const string DEFAULT_DLL_URL = "https://horion.download/bin/Horion.dll";
+        private bool _isBusy;
+        private ConnectionState _connectionState = ConnectionState.None;
+        private ConsoleWindow _console;
 
         public MainWindow()
         {
             InitializeComponent();
-            
-            // Set version label
-            VersionLabel.Content = $"v{Assembly.GetExecutingAssembly().GetName().Version.Major}.{Assembly.GetExecutingAssembly().GetName().Version.Minor}";
-            
+            _console = CreateConsoleWindow();
+            var version = Assembly.GetExecutingAssembly().GetName().Version;
+            VersionLabel.Content = $"v{version.Major}.{version.Minor}";
             UpdateConnectionState();
-
-            // Check connection on startup
-            Task.Run(() =>
-            {
-                if (CheckConnection())
-                {
-                    SetStatus("checking for updates...");
-                }
-            });
+            Loaded += async (sender, args) => await RefreshConnectionStateAsync();
         }
 
         private void UpdateConnectionState()
@@ -64,135 +49,114 @@ namespace PebbleInjector
 
         private void SetStatus(string status)
         {
-            _done = false;
-            _status = status;
-            
-            // Update UI on main thread
-            Dispatcher.Invoke(() => InjectButton.Content = $"{_status}...");
-            
-            Console.WriteLine($"[Status] {status}");
+            Dispatcher.Invoke(() =>
+            {
+                InjectButton.Content = status == "done" ? "inject" : $"{status}...";
+                _console?.Append(status);
+            });
         }
 
-        private void Done()
+        private void FinishOperation()
         {
-            _done = true;
-            _status = "";
-            _ticks = 0;
-            Dispatcher.Invoke(() => InjectButton.Content = "inject");
-            SetStatus("done");
+            _isBusy = false;
+            InjectButton.Content = "inject";
         }
 
-        // Left click: Download and inject default DLL
         private async void InjectButton_Left(object sender, MouseButtonEventArgs e)
         {
-            if (!_done) return;
+            if (_isBusy) return;
 
-            SetStatus("checking connection...");
-            
-            if (!CheckConnection())
-            {
-                var result = MessageBox.Show(
-                    "Can't reach download server. Try anyways?", 
-                    null, 
-                    MessageBoxButton.YesNo);
-                
-                if (result == MessageBoxResult.No)
-                {
-                    Done();
-                    return;
-                }
-            }
-
-            SetStatus("downloading DLL...");
-            
-            var tempPath = Path.Combine(Path.GetTempPath(), "PebbleInjector.dll");
-            
+            _isBusy = true;
             try
             {
-                using (var wc = new WebClient())
+                SetStatus("checking connection");
+                if (!await RefreshConnectionStateAsync())
                 {
-                    await wc.DownloadFileTaskAsync(new Uri(DEFAULT_DLL_URL), tempPath);
+                    var result = MessageBox.Show(
+                        "Can't reach the download server. Try anyway?",
+                        "Connection failed",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Warning);
+                    if (result == MessageBoxResult.No) return;
                 }
 
-                // Auto-detect Minecraft process and inject
-                var processes = Process.GetProcessesByName("Minecraft.Windows");
-                
-                if (processes.Length == 0)
+                SetStatus("downloading DLL");
+                var tempPath = Path.Combine(Path.GetTempPath(), "PebbleInjector.dll");
+                using (var client = new WebClient())
                 {
-                    MessageBox.Show("Minecraft not running. Launching...");
-                    
-                    Task.Run(() =>
+                    await client.DownloadFileTaskAsync(new Uri(DefaultDllUrl), tempPath);
+                }
+
+                var process = FindMinecraftProcess();
+                if (process == null)
+                {
+                    SetStatus("launching Minecraft");
+                    Process.Start(new ProcessStartInfo
                     {
-                        try
-                        {
-                            Shell("explorer.exe shell:appsFolder\\Microsoft.MinecraftUWP_8wekyb3d8bbwe!App", Wait: false);
-                            
-                            // Wait for process to start
-                            int waitCount = 0;
-                            while (processes.Length == 0 && waitCount < 200)
-                            {
-                                processes = Process.GetProcessesByName("Minecraft.Windows");
-                                Thread.Sleep(10);
-                                waitCount++;
-                            }
+                        FileName = "explorer.exe",
+                        Arguments = "shell:appsFolder\\Microsoft.MinecraftUWP_8wekyb3d8bbwe!App",
+                        UseShellExecute = true
+                    });
+                    process = await WaitForMinecraftAsync(TimeSpan.FromSeconds(30));
+                }
 
-                            if (processes.Length > 0)
-                            {
-                                SetStatus($"injecting into PID: {processes[0].Id}");
-                                InjectorBase.Inject(tempPath, (uint)processes[0].Id);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show($"Launch failed: {ex.Message}");
-                        }
-                    }).Wait();
-                }
-                else
+                if (process == null)
                 {
-                    SetStatus($"injecting into PID: {processes[0].Id}");
-                    InjectorBase.Inject(tempPath, (uint)processes[0].Id);
+                    throw new TimeoutException("Minecraft did not start within 30 seconds.");
                 }
+
+                await InjectAsync(tempPath, process);
+                MessageBox.Show(
+                    "DLL injected successfully.",
+                    "PebbleInjector",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Download failed: {ex.Message}");
+                ShowError(ex);
             }
-
-            Done();
+            finally
+            {
+                FinishOperation();
+            }
         }
 
-        // Right click: Use custom DLL path
-        private void InjectButton_Right(object sender, MouseButtonEventArgs e)
+        private async void InjectButton_Right(object sender, MouseButtonEventArgs e)
         {
-            if (!_done) return;
+            if (_isBusy) return;
 
             var dialog = new OpenFileDialog
             {
                 Filter = "DLL files (*.dll)|*.dll",
                 RestoreDirectory = true
             };
+            if (dialog.ShowDialog() != true) return;
 
-            if (dialog.ShowDialog().GetValueOrDefault())
+            _isBusy = true;
+            try
             {
-                SetStatus("selecting DLL...");
-                
-                // Auto-detect Minecraft process and inject
-                var processes = Process.GetProcessesByName("Minecraft.Windows");
-                
-                if (processes.Length == 0)
+                var process = FindMinecraftProcess();
+                if (process == null)
                 {
-                    MessageBox.Show("Minecraft not running. Launch it first, then click again.");
-                    Done();
-                    return;
+                    throw new InvalidOperationException(
+                        "Minecraft is not running. Launch it first, then try again.");
                 }
 
-                SetStatus($"injecting into PID: {processes[0].Id}");
-                InjectorBase.Inject(dialog.FileName, (uint)processes[0].Id);
+                await InjectAsync(dialog.FileName, process);
+                MessageBox.Show(
+                    "DLL injected successfully.",
+                    "PebbleInjector",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
             }
-            else
+            catch (Exception ex)
             {
-                Done();
+                ShowError(ex);
+            }
+            finally
+            {
+                FinishOperation();
             }
         }
 
@@ -202,30 +166,118 @@ namespace PebbleInjector
             {
                 var request = (HttpWebRequest)WebRequest.Create("https://horion.download");
                 request.KeepAlive = false;
-                request.Timeout = 1000;
-                using (request.GetResponse()) 
+                request.Timeout = 3000;
+                using (request.GetResponse())
+                {
                     return true;
+                }
             }
-            catch (Exception)
+            catch
             {
                 return false;
             }
         }
 
-        private void CloseWindow(object sender, MouseButtonEventArgs e) => Application.Current.Shutdown();
-        
-        private void DragWindow(object sender, MouseButtonEventArgs e) => DragMove();
+        private async Task<bool> RefreshConnectionStateAsync()
+        {
+            var connected = await Task.Run(() => CheckConnection());
+            _connectionState = connected ? ConnectionState.Connected : ConnectionState.Disconnected;
+            UpdateConnectionState();
+            return connected;
+        }
+
+        private static Process FindMinecraftProcess()
+        {
+            foreach (var process in Process.GetProcessesByName("Minecraft.Windows"))
+            {
+                try
+                {
+                    if (!process.HasExited) return process;
+                }
+                catch
+                {
+                    // The process disappeared while it was being inspected.
+                }
+
+                process.Dispose();
+            }
+
+            return null;
+        }
+
+        private static async Task<Process> WaitForMinecraftAsync(TimeSpan timeout)
+        {
+            var deadline = DateTime.UtcNow + timeout;
+            while (DateTime.UtcNow < deadline)
+            {
+                var process = FindMinecraftProcess();
+                if (process != null) return process;
+                await Task.Delay(250);
+            }
+
+            return null;
+        }
+
+        private Task InjectAsync(string dllPath, Process process)
+        {
+            var processId = checked((uint)process.Id);
+            process.Dispose();
+            return Task.Run(() => InjectorBase.Inject(dllPath, processId, SetStatus));
+        }
+
+        private void ShowError(Exception exception)
+        {
+            MessageBox.Show(
+                exception.Message,
+                "Injection failed",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+            _console?.Append($"Error: {exception}");
+        }
+
+        private void CloseWindow(object sender, MouseButtonEventArgs e)
+        {
+            Application.Current.Shutdown();
+        }
+
+        private void DragWindow(object sender, MouseButtonEventArgs e)
+        {
+            if (e.LeftButton == MouseButtonState.Pressed)
+            {
+                DragMove();
+            }
+        }
 
         private void ConsoleButton_Click(object sender, RoutedEventArgs e)
         {
-            // Toggle console visibility (currently hidden - placeholder for future implementation)
-            if (_consoleVisible == false)
-                _consoleVisible = true;
+            if (_console == null)
+            {
+                _console = CreateConsoleWindow();
+            }
+
+            if (_console.IsVisible)
+            {
+                _console.Hide();
+            }
             else
-                _consoleVisible = false;
+            {
+                _console.Show();
+                _console.Activate();
+            }
+        }
+
+        private ConsoleWindow CreateConsoleWindow()
+        {
+            var window = new ConsoleWindow { Owner = this };
+            window.Closed += (sender, args) => _console = null;
+            return window;
         }
     }
 
-    // Connection state enum
-    public enum ConnectionState { None, Connected, Disconnected }
+    public enum ConnectionState
+    {
+        None,
+        Connected,
+        Disconnected
+    }
 }
