@@ -22,12 +22,18 @@
 
   <ItemGroup>
     <Resource Include="console.png"/>
-    <Resource Include="horion-banner.png"/>
+    <Resource Include="pebble-banner.png"/>
   </ItemGroup>
 
   <ItemGroup>
     <!-- Developer-only asset generator; it is not part of the WPF application. -->
     <Compile Remove="CreateImages.cs" />
+  </ItemGroup>
+
+  <ItemGroup Condition="Exists('CustomDLL\build-nightvision\Release\PebbleCore.dll')">
+    <None Include="CustomDLL\build-nightvision\Release\PebbleCore.dll"
+          Link="PebbleCore.dll"
+          CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

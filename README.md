@@ -19,9 +19,8 @@ The executable is written to `bin\x64\Release\net48\PebbleInjector.exe`.
 
 ## Use
 
-- Left-click **inject** to download the configured default DLL, launch Minecraft
-  if needed, and inject it.
-- Right-click **inject** to choose a local DLL.
+- Click **inject** to choose a local DLL. Minecraft is launched automatically if
+  it is not already running.
 - Click the terminal icon to view operation details.
 
 Only load DLLs you trust and have permission to use. The injector and target DLL

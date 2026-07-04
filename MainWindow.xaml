@@ -94,7 +94,7 @@
         </Label>
 
         <!-- Banner image (replace with your own if needed) -->
-        <Image Source="horion-banner.png" Width="300" Margin="0, 0, 0, 80"/>
+        <Image Source="pebble-banner.png" Width="300" Margin="0, 0, 0, 80"/>
 
         <!-- Main inject button -->
         <Label x:Name="InjectButton" Content="inject" FontFamily="Bahnschrift" FontWeight="Bold" 
@@ -102,7 +102,7 @@
                Height="60" Width="250" RenderTransformOrigin="0.5 0.5"
                HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,140,0,0"
                HorizontalContentAlignment="Center" VerticalContentAlignment="Center"
-               MouseLeftButtonUp="InjectButton_Left" MouseRightButtonUp="InjectButton_Right">
+               MouseLeftButtonUp="InjectButton_Click">
             <Label.Clip>
                 <RectangleGeometry Rect="0,0,250,60" RadiusX="10" RadiusY="10"/>
             </Label.Clip>
@@ -155,10 +155,6 @@
             </Label.Style>
         </Label>
 
-        <!-- Connection state label (bottom right) -->
-        <Label Visibility="Hidden" FontFamily="Bahnschrift" 
-               x:Name="ConnectionStateLabel" VerticalAlignment="Bottom" HorizontalAlignment="Right" Margin="5"/>
-        
         <!-- Version label (bottom left) -->
         <Label FontFamily="Bahnschrift" Foreground="White" 
                x:Name="VersionLabel" HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="5"/>

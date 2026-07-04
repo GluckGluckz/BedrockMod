@@ -56,7 +56,7 @@ namespace PebbleInjector.Images
                     }
                 }
                 
-                banner.Save("C:\\dev\\PebbleInjector\\Injector-master\\PebbleInjector\\horion-banner.png", ImageFormat.Png);
+                banner.Save("pebble-banner.png", ImageFormat.Png);
             }
 
             Console.WriteLine("Images created successfully!");
